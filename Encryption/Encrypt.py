@@ -79,21 +79,31 @@ def createImages():
 #NOTE: the image dimensions are 480 by 640!!
 def analyzeImages():
         counter = 0 #To label images
-        p_value = [] #To store random pixel values
+        p_value = [] #To store all random pixel values
+        rgb_values = [] #To put in RGB formatq
         save_folder = "captured_images"
         directory = os.listdir(save_folder)
         if len(directory) > 0: #If there are photo in captured_images directory.
             for files in directory:
                 img_name = os.path.join(save_folder, f"opencv_frame_{counter}.png") 
-                imgData = cv.imread(img_name, cv.IMREAD_GRAYSCALE)
-                height, width = imgData.shape #Gets the dimensions of the PNG
+                imgData = cv.imread(img_name, cv.IMREAD_COLOR_RGB)
+                height, width, channels = imgData.shape #Gets the dimensions of the PNG
                 randRow = rand.randint(0, height) #Randomize the row pixel value that will be evaluated
-                randCol = rand.randint(0, width) #Randomize the col pixel valie that will be evaluated
-                p_value.append(imgData[randRow, randCol]) #Append the value to the array.
+                randCol = rand.randint(0, width) #Randomize the col pixel value that will be evaluated
+                p_value = (imgData[randRow, randCol]) #Stores BGR image data
+                blueValue = p_value[0] #Blue value
+                redValue = p_value[1] #Red value
+                greenValue = p_value[2] #Green value
+                rgb_values.append(redValue)
+                rgb_values.append(greenValue)
+                rgb_values.append(blueValue)
+                
+
         else:
              print("No images in directory")
 
-        print(p_value)
+        print(rgb_values)
+        return rgb_values
 
         
 
