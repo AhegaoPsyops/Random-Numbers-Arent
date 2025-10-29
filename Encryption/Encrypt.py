@@ -5,11 +5,9 @@ import cv2 as cv
 import numpy as np
 from pathlib import Path
 import time
+import random as rand
 
 
-
-
-    
 #Starts up OpenCV webcam, takes photos from the webcam that will be used to collect data from. 
 def createImages():
         #Set number of photos taken
@@ -45,15 +43,16 @@ def createImages():
         #If the user presses the space bar, it takes PNG images of the frame being captured via webcam.
             if cv.waitKey(1) % 256 == 32:
                 for i in range(numberOfPhotos):
+                     ret, frame = cap.read() #Reads frame
                      img_name = os.path.join(save_folder, f"opencv_frame_{counter}.png") #Names image  and joins it to the save folder (captured_images)
                      imgData = cv.imwrite(img_name, frame) #Writes the image into save folder
                      print("{} written!".format(img_name))  #Debugging
                      print(counter)
                      counter += 1  #Adds to image counter for naming purposes.
-                     time.sleep(delay)
+                     time.sleep(delay) #Delay with photos being taken.
             
 
-        #If the user presses q, it leaves the webcam and deletes the PNGs from the captured_images directory. (Will be updated with GUI later)
+        #If the user presses q, it analyzes images and leaves the webcam.
             if cv.waitKey(1) == ord('q'):
                 analyzeImages()
                 exit()
@@ -77,17 +76,27 @@ def createImages():
 
         
 #Takes images from captured_images directory and analyzes it (in progress)   
+#NOTE: the image dimensions are 480 by 640!!
 def analyzeImages():
-        counter = 0
+        counter = 0 #To label images
+        p_value = [] #To store random pixel values
         save_folder = "captured_images"
         directory = os.listdir(save_folder)
-        if len(directory) > 0:
+        if len(directory) > 0: #If there are photo in captured_images directory.
             for files in directory:
-                img_name = os.path.join(save_folder, f"opencv_frame_{counter}.png")
-                imgData = cv.imread(img_name, cv.IMREAD_COLOR)
-                print(f"Image data type: {imgData.dtype}")
+                img_name = os.path.join(save_folder, f"opencv_frame_{counter}.png") 
+                imgData = cv.imread(img_name, cv.IMREAD_GRAYSCALE)
+                height, width = imgData.shape #Gets the dimensions of the PNG
+                randRow = rand.randint(0, height) #Randomize the row pixel value that will be evaluated
+                randCol = rand.randint(0, width) #Randomize the col pixel valie that will be evaluated
+                p_value.append(imgData[randRow, randCol]) #Append the value to the array.
         else:
              print("No images in directory")
+
+        print(p_value)
+
+        
+
                
                 
       
