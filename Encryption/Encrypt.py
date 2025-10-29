@@ -6,6 +6,7 @@ import numpy as np
 from pathlib import Path
 import time
 import random as rand
+import hashlib
 
 
 #Starts up OpenCV webcam, takes photos from the webcam that will be used to collect data from. 
@@ -67,8 +68,6 @@ def createImages():
                          i+= 1
                
         
-        
-
         cap.release()
         cv.destroyAllWindows
         
@@ -102,18 +101,17 @@ def analyzeImages():
         else:
              print("No images in directory")
 
-        print(rgb_values)
-        return rgb_values
+        stringRGBvalue = "".join(str(i) for i in rgb_values )
+        print(stringRGBvalue)
+        return stringRGBvalue
+
+
+
 
         
-
-               
-                
-      
-        
-
 def main():
     createImages()
+    
     
     
 
