@@ -72,14 +72,12 @@ def createImages():
         cv.destroyAllWindows
         
         
-
-        
-#Takes images from captured_images directory and analyzes it (in progress)   
+#Takes images from captured_images directory and gets random data and encrypts it with SHA-256 Hash
 #NOTE: the image dimensions are 480 by 640!!
 def analyzeImages():
         counter = 0 #To label images
         p_value = [] #To store all random pixel values
-        rgb_values = [] #To put in RGB formatq
+        rgb_values = [] #To put in RGB format
         save_folder = "captured_images"
         directory = os.listdir(save_folder)
         if len(directory) > 0: #If there are photo in captured_images directory.
@@ -96,24 +94,20 @@ def analyzeImages():
                 rgb_values.append(redValue)
                 rgb_values.append(greenValue)
                 rgb_values.append(blueValue)
+                stringRGBvalue = "".join(str(i) for i in rgb_values ) #Make values into one long string value
+                encoded_value = stringRGBvalue.encode('utf-8') #Encode the values
+                hashed_value = hashlib.sha256(encoded_value).hexdigest() #Calculate SHA-256 hash
+                print(f"SHA-256 hash: {hashed_value}") #(for debugging)
+                return hashed_value
                 
 
         else:
              print("No images in directory")
 
-        stringRGBvalue = "".join(str(i) for i in rgb_values )
-        print(stringRGBvalue)
-        return stringRGBvalue
 
-
-
-
-        
+ 
 def main():
     createImages()
     
-    
-    
-
 if __name__ == "__main__":
     main()
