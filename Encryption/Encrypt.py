@@ -94,11 +94,12 @@ def analyzeImages():
                 rgb_values.append(redValue)
                 rgb_values.append(greenValue)
                 rgb_values.append(blueValue)
-                stringRGBvalue = "".join(str(i) for i in rgb_values ) #Make values into one long string value
-                encoded_value = stringRGBvalue.encode('utf-8') #Encode the values
-                hashed_value = hashlib.sha256(encoded_value).hexdigest() #Calculate SHA-256 hash
-                print(f"SHA-256 hash: {hashed_value}") #(for debugging)
-                return hashed_value
+                stringRGBvalue = "".join(str(i) for i in rgb_values ) 
+            
+            print(stringRGBvalue)
+            return stringRGBvalue
+                
+                
                 
 
         else:
