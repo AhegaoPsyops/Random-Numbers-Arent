@@ -26,6 +26,12 @@ def createImages():
         
         #Captures video
         cap = cv.VideoCapture(0)
+
+        desired_width = 1280
+        desired_height = 720
+
+        cap.set(cv.CAP_PROP_FRAME_WIDTH, desired_width)
+        cap.set(cv.CAP_PROP_FRAME_HEIGHT, desired_height)
       
         #While video is playing...
         while True:
