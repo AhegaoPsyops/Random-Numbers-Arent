@@ -12,7 +12,7 @@ import hashlib
 #Starts up OpenCV webcam, takes photos from the webcam that will be used to collect data from. 
 def createImages():
         #Set number of photos taken
-        numberOfPhotos = 10
+        numberOfPhotos = 20
         #Image counter used for file naming process/debugging
         counter = 0
         #Timer for photos being taken after each iteration
@@ -27,8 +27,8 @@ def createImages():
         #Captures video
         cap = cv.VideoCapture(0)
 
-        desired_width = 1280
-        desired_height = 720
+        desired_width = 480
+        desired_height = 640
 
         cap.set(cv.CAP_PROP_FRAME_WIDTH, desired_width)
         cap.set(cv.CAP_PROP_FRAME_HEIGHT, desired_height)
@@ -115,6 +115,7 @@ def analyzeImages():
  
 def main():
     createImages()
+    quit
     
 if __name__ == "__main__":
     main()

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import threading
 import time
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 import Encrypt
 
 
@@ -13,9 +13,9 @@ def Encryption_thread(work_id, window):
     Encrypt.main()
     # at the end of the work, before exiting, send a message back to the GUI indicating end
     window.write_event_value('-THREAD DONE-', work_id)
-    sg.popup_non_blocking('Finished!!', grab_anywhere=True)
+    #sg.popup_non_blocking('Finished!!', grab_anywhere=True)
     # at this point, the thread exits
-    return
+    
 
 
 
