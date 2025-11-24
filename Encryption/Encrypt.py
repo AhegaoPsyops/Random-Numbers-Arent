@@ -9,11 +9,11 @@ import random as rand
 import hashlib
 
 ################ VARIABLES ###################
-DESIRED_WIDTH = 480
-DESIRED_HEIGHT = 640
-ANALYZE_IMG_ORD = 'q'
-IMAGE_TAKER_ORD = 32
-CLEAR_IMAGES_ORD = 'c'
+DESIRED_WIDTH = 480    # desired width of webcam window
+DESIRED_HEIGHT = 640    # desired height of webcam window
+ANALYZE_IMG_ORD = 'q'   # desired keyboard key to call analyzeImage function
+IMAGE_TAKER_ORD = 32    # desired keyboard key to call image_taker function
+CLEAR_IMAGES_ORD = 'c'    # desired keyboard key to call clear_images function
 
 ########## CREATE_FOLDER ######################
 ### Creates the folder for the photos to be saves in
@@ -67,7 +67,12 @@ def clear_images(save_folder):
         if fileName.startswith("opencv_frame_") and fileName.endswith(".png"):
             os.remove(os.path.join(save_folder, fileName))
 
-#Starts up OpenCV webcam, takes photos from the webcam that will be used to collect data from. 
+################## createImages ################
+### Starts up OpenCV webcam, takes photos from the webcam that will be used to collect data from. 
+### Parameters ###
+# N/A
+### Returns ###
+# N/A
 def createImages():
         #Set number of photos taken
         numberOfPhotos = 20
@@ -116,8 +121,12 @@ def createImages():
         cap.release()
         cv.destroyAllWindows
         
-        
-#Takes images from captured_images directory and gets random data 
+############## analyzeImages #####################
+###Takes images from captured_images directory and gets random data 
+### Parameters ###
+# N/A
+### Returns ###
+# stringRGBvalue - a string of the random number to be used/analyzedS
 #NOTE: 
 def analyzeImages():
         counter = 0 #To label images
@@ -154,6 +163,13 @@ def analyzeImages():
         else:
              print("No images in directory")
 
+################ ENTROPY ###################
+### Uses Shannon Entropy and pixel intensity value to compute the entropy of each image, 
+### then compute the average entropy by finding the mean. 
+### Parameters ###
+# N/A
+### Returns ###
+# avg_enropy - the calculated average entropy of the images
 def entropy():
        save_folder = "captured_images"
        directory = os.listdir(save_folder)
@@ -172,14 +188,17 @@ def entropy():
                        if p > 0:
                             entropy -= p * np.log2(p)
 
+            avg_entropy = entropy/ 20.0
             print("Average Entropy: ")
-            print(entropy/ 20.0)
-                
-    
+            print(avg_entropy)
+            return avg_entropy
 
-                 
-    
- 
+ ################ MAIN ##################
+ ### try to run createImages, except if user kills process
+ ### Parameters ###
+ # N/A
+ ### Returns ###
+ # N/A
 def main():
     try:
         createImages()
