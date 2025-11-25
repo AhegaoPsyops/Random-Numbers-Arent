@@ -29,6 +29,16 @@ def create_folder(name):
             os.makedirs(folder)
         return folder
 
+########## SAVE_IMAGE ######################
+### Writes the image into the save folder (necessary for testing)
+### Parameters ###
+# path - the desired filename
+# frame - takes in the frame
+### Returns ###
+# N/A
+def save_frame(path, frame):
+    cv.imwrite(path, frame)  #Writes the image into save folder
+
 ############   SPACE_BAR_COMMAND   ######################
 ### If space bar, then take photos
 ### Parameters ###
@@ -48,8 +58,7 @@ def image_taker(num_photos, capture, save_folder, delay, counter):
             break
 
         img_name = os.path.join(save_folder, f"opencv_frame_{counter}.png")  #Names image  and joins it to the save folder (captured_images)
-        cv.imwrite(img_name, frame)  #Writes the image into save folder
-
+        save_frame(img_name, frame)
         print("{} written!".format(img_name))  #Debugging  #Debugging
         counter += 1  #Adds to image counter for naming purposes.
         time.sleep(delay) #Delay with photos being taken.
@@ -89,44 +98,45 @@ def createImages():
 
         cap.set(cv.CAP_PROP_FRAME_WIDTH, DESIRED_WIDTH)
         cap.set(cv.CAP_PROP_FRAME_HEIGHT, DESIRED_HEIGHT)
-      
-        #While video is playing...
-        while True:
-            #Reads a frame
-            ret, frame = cap.read()
+        try:
+            #While video is playing...
+            while True:
+                #Reads a frame
+                ret, frame = cap.read()
 
-            #Error checking
-            if not ret:
-                print("Error!")
-                break
+                #Error checking
+                if not ret:
+                    print("Error!")
+                    break
+            
+                # Display the resulting frame (live feed from camera)
+                cv.imshow('Frame_final', frame)
+                key = cv.waitKey(1) & 0xFF  # READ KEY ONCE
+
+                #If the user presses the space bar, it takes PNG images of the frame being captured via webcam.
+                if key == IMAGE_TAKER_ORD:
+                    counter = image_taker(numberOfPhotos, cap, save_folder, delay, counter)
+
+                #If the user presses q, it analyzes images and leaves the webcam.
+                elif key == ord(ANALYZE_IMG_ORD):
+                    analyzeImages()
+                    break
+
+                #If the user presses c, it will clear out the captured_images directory in case the user wants to restart/retakes images.
+                if key == ord(CLEAR_IMAGES_ORD):
+                    clear_images(save_folder)
         
-            # Display the resulting frame (live feed from camera)
-            cv.imshow('Frame_final', frame)
-            key = cv.waitKey(1) & 0xFF  # READ KEY ONCE
-
-            #If the user presses the space bar, it takes PNG images of the frame being captured via webcam.
-            if key == IMAGE_TAKER_ORD:
-                counter = image_taker(numberOfPhotos, cap, save_folder, delay, counter)
-
-            #If the user presses q, it analyzes images and leaves the webcam.
-            elif key == ord(ANALYZE_IMG_ORD):
-                analyzeImages()
-                break
-                
-
-            #If the user presses c, it will clear out the captured_images directory in case the user wants to restart/retakes images.
-            if key == ord(CLEAR_IMAGES_ORD):
-                clear_images(save_folder)
-        
-        cap.release()
-        cv.destroyAllWindows
+        finally:
+            cap.release()
+            cv.destroyAllWindows()
+            cv.waitKey(1)  #Ensures all windows are fully destroyed
         
 ############## analyzeImages #####################
 ###Takes images from captured_images directory and gets random data 
 ### Parameters ###
 # N/A
 ### Returns ###
-# stringRGBvalue - a string of the random number to be used/analyzedS
+# stringRGBvalue - a string of the random number to be used/analyzed
 #NOTE: 
 def analyzeImages():
         counter = 0 #To label images
