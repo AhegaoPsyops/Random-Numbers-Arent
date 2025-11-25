@@ -55,6 +55,9 @@ def the_gui():
             window['-OUTPUT2-'].update(
                 'Complete Work ID "{}"'.format(completed_work_id))
             window[completed_work_id].update(text_color='green')
+            PRNG = Encrypt.analyzeImages()
+            prng_len = 1000
+            sg.popup_non_blocking(f'Raw Key: {PRNG}\nKey Length: {prng_len}', grab_anywhere=True)
 
         ## This is just the syntax for a popup -- only here so I can easily copy/paste for now.
         if event == 'Average Entropy':
