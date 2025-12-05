@@ -1,9 +1,13 @@
+import sys
+import os
+# Add the parent directory (project root) to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from Encrypt import createImages, analyzeImages, create_folder, image_taker, clear_images, save_frame, entropy
 import pytest
 from unittest.mock import patch, MagicMock
 import cv2 as cv 
 import numpy as np
-import os
 import shutil
 
 # Constants to match your code (replace with your actual key codes)
