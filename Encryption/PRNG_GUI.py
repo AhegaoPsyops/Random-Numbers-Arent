@@ -22,7 +22,7 @@ def the_gui():
               [sg.Text(size=(40, 1), key='-OUTPUT-')],
               [sg.Text(size=(25, 1), key='-OUTPUT2-')],
               [sg.Text('⚫', text_color='blue', key=i, pad=(0,0), font='Default 14') for i in range(20)],
-              [sg.Button('Generate PRNG'), sg.Button('Average Entropy'), sg.Button('Exit')], ]
+              [sg.Button('Generate PRNG'), sg.Button('Average Entropy', button_color='orange'), sg.Button('Predict PRNG', button_color='green'), sg.Button('Exit', button_color='red')], ]
 
     window = sg.Window('Random Numbers Are Not', layout)
     # --------------------- EVENT LOOP ---------------------

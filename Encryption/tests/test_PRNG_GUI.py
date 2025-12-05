@@ -92,6 +92,7 @@ def test_average_entropy_button():
         # Simulate clicking Average Entropy then Exit
         mock_window = FakeWindow([
             ("Average Entropy", {}),
+            ("Predict PRNG", {}),
             ("Exit", {})
         ])
         mock_window_class.return_value = mock_window
