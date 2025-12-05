@@ -2,137 +2,204 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
+from tensorflow.keras.layers import LSTM, Dense, Input
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from datetime import datetime
 import os
 import sys
+import logging
+import joblib
 
-# train AI model on dual GPU setup via CUDA
-# sets up an NP array of random numbers, set by the parameters
-# Retrains on data, then at the end makes predictions
 
-# Set environment variable to ensure TensorFlow sees the 2 GPUs
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+# RANDOM NUMBERS ARENT
+# The goal of this project is to prove if an AI model is capable of guessing the next numbers in a chain.
+# Utilizes Keras to create an LSTM AI model, allowing Neural Networks to calculate algorithms over training on numbers
+# Trains on a chain of random numbers, and then predicts off of a testing split.
+#
 
-# set logging start time
-startTime = datetime.now()
+# TRAINING VARIABLES
+# These are the global variables for training
 
-# Define Mirrored Strategy
-strategy = tf.distribute.MirroredStrategy()
-print(f'Number of devices being used: {strategy.num_replicas_in_sync}')
-
-# Parameter setting
+# Input sequence length
 SEQUENCE_LENGTH = 256
 NUM_FEATURES = 1
+# Numbers being trained on
 PRNG_SEQUENCE_LENGTH = 512
-PRED_RANGE = 10
+# Predicted values: for most effectiveness using 0-9
+PRED_VALUES = 10
+# How many to predict
+PRED_RANGE = 32
+# How many times are we training? (Epochs)
 PASSES = 10
-
-# Batch Size: doubled from normal for dual GPU training
+# Batch size for training
 GLOBAL_BATCH_SIZE = 64
+# Seed PRNG, for testing purposes, preseeds PRNG for expected known results
+RANDOM_SEED = 42 # 42 lol, for some reason this is classic for AI researchers. Its almost everywhere in AI docs
 
-# PRNG sample data
-np.random.seed(42)
-raw_data = np.random.rand(PRNG_SEQUENCE_LENGTH)
-scaler = MinMaxScaler(feature_range=(0, 1))
-scaled_data = scaler.fit_transform(raw_data.reshape(-1, 1))
 
-# Input/Output Sequences
+
+# OPTIONAL VARIABLES
+
+# make FALSE if training on CPU
+GPU_ENABLED = True
+# Logging?
+LOGGING = True
+# Logging file
+OUTPUT_LOGFILE = "output.txt"
+# Save model after training
+SAVE_MODEL = False
+# Saved model name
+MODEL_NAME = "randisnt.keras"
+# Save scaler after training
+SAVE_SCALER = False
+# Saved Scaler name
+SCALER_NAME = "scaler.save"
+
+
+# preseeding PRNG for debugging outputs.
+np.random.seed(RANDOM_SEED)
+
+# Logging setup
+if LOGGING:
+        logging.basicConfig(level=logging.INFO,format="%(asctime)s %(levelname)s %(message)s",handlers=[logging.StreamHandler(sys.stdout),logging.FileHandler(OUTPUT_LOGFILE, mode="a")])
+        logger = logging.getLogger(__name__)
+
+# Data generation: integers 0-9
+def generate_data(total=PRNG_SEQUENCE_LENGTH, value_range=PRED_VALUES):
+        # generates Ints, but saves them as floats
+        data = np.random.randint(0,value_range, size=(total)).astype(np.float32)
+        # Why? Keras cant train on Integers, and requires discrete values
+        # this error is also why earlier versions run on numpy float values, this was an error I couldnt get around at first
+        # easy fix after all
+        return data.reshape(-1,1)
+
+# Window Function: controls the hardware training window
 def create_sequences(data, seq_len, pred_range):
-    x, y = [], []
-    for i in range(len(data) - seq_len - pred_range + 1):
-        x.append(data[i:(i + seq_len), 0])
-        y.append(data[i + seq_len: i + seq_len + pred_range, 0])
-    return np.array(x), np.array(y)
+        x, y = [], []
+        max_i = len(data) - seq_len - pred_range + 1
+        for i in range(max_i):
+                x.append(data[i:(i + seq_len), 0])
+                y.append(data[i + seq_len: i + seq_len + pred_range, 0])
+        return np.array(x), np.array(y)
 
-# Create sequences
-X, y = create_sequences(scaled_data, SEQUENCE_LENGTH, PRED_RANGE)
-# If no sequences were created this will raise (shape[0] == 0)
-if X.size == 0 or y.size == 0:
-    raise ValueError(
-        f"Sequence length {SEQUENCE_LENGTH} is too large for dataset "
-        f"({PRNG_SEQUENCE_LENGTH} values). No sequences could be created."
-    )
+# AI Model creation
+def build_model(seq_len, num_features, pred_len):
+        # model = Sequential([Input(shape=(seq_len,num_features)),LSTM(64, return_sequences=False),Dense(pred_len)])
+        model = Sequential()
+        model.add(LSTM(units=50, return_sequences=False, input_shape=(SEQUENCE_LENGTH, NUM_FEATURES)))
+        model.add(Dense(PRED_RANGE))
+        model.compile(optimizer="adam",loss="mse")
+        # model.summary()
+        return model
 
-# reshape for LSTM
-X = X.reshape(X.shape[0], X.shape[1], NUM_FEATURES)
-y = y.reshape(y.shape[0], PRED_RANGE)
+# TRAINING
+def train_model():
+        startTime = datetime.now()
+        logger.info("Starting Training")
 
-# Debug pring for x and y shapes
-print("X shape:", X.shape, "y shape:", y.shape)
+        data = generate_data(total=PRNG_SEQUENCE_LENGTH,value_range=PRED_VALUES)
+        scaler = MinMaxScaler(feature_range=(0, 1))
+        scaled = scaler.fit_transform(data)
+        logger.info("Generated Raw Data")
 
-# ensure train/test split won't produce an empty test set
-min_test_size = 1
-computed_test_size = int(0.2 * len(X))
-if computed_test_size < min_test_size:
-    raise ValueError(
-        f"Test split would be empty (computed size {computed_test_size}). "
-        f"Reduce SEQUENCE_LENGTH or increase PRNG_SEQUENCE_LENGTH."
-    )
+        # Sequences
+        X, y = create_sequences(scaled, SEQUENCE_LENGTH, PRED_RANGE)
 
-# Split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        X = X.reshape(X.shape[0], SEQUENCE_LENGTH, NUM_FEATURES)
+        y = y.reshape(y.shape[0], PRED_RANGE)
+        logger.info("X Shape: %s, y shape: %s", X.shape, y.shape)
 
-print("Train size:", X_train.shape[0], "Test size:", X_test.shape[0])
+        # Training Split
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=RANDOM_SEED)
 
-# Build LSTM model inside strategy scope
-with strategy.scope():
-    model = Sequential()
-    model.add(LSTM(units=50, return_sequences=False, input_shape=(SEQUENCE_LENGTH, NUM_FEATURES)))
-    model.add(Dense(PRED_RANGE))
+        logger.info("Train Size: %d, Test size: %d", X_train.shape[0], X_test.shape[0])
 
-    # Compile Model
-    model.compile(optimizer='adam', loss='mean_squared_error')
+        # Training Strategy
+        # Runs check on whether or not GPU training is enabled
+        if GPU_ENABLED:
+                os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+                logger.info("Using GPU devices")
+                strategy = tf.distribute.MirroredStrategy()
+        # When training on multiple processors, needs to mirror model to each one
+                with strategy.scope():
+                        # model = build_model(SEQUENCE_LENGTH, NUM_FEATURES, PRED_RANGE)
+                        model = Sequential()
+                        model.add(LSTM(units=50, return_sequences=False, input_shape=(SEQUENCE_LENGTH, NUM_FEATURES)))
+                        model.add(Dense(PRED_RANGE))
+                        model.compile(optimizer="adam",loss="mse")
 
-print("Starting GPU model training...")
+        else:
+                os.environ["CUDA_VISIBLE_DEVICES"] = ""
+                logger.info("Using CPU (WARNING: NOT OPTIMIZED FOR CPU TRAINING)")
+                strategy = None
+                model = build_model(SEQUENCE_LENGTH, NUM_FEATURES, PRED_RANGE)
 
-# Train the Model
-history = model.fit(
-    X_train, y_train,
-    epochs=PASSES,
-    batch_size=GLOBAL_BATCH_SIZE,
-    validation_data=(X_test, y_test),
-    verbose=1
-)
+        model.summary(print_fn=lambda s: logger.info(s))
 
-print("Training Complete")
+        logger.info("Starting training for %d Epochs", PASSES)
+        # Before training, if there is any remainders when mirroring data to GPUs, drops overflow
+        #train_ds = tf.data.Dataset.from_tensor_slices((X_train, y_train))
+        # train_ds = train_ds.shuffle(buffer_size=len(X_train), seed=RANDOM_SEED).batch(GLOBAL_BATCH_SIZE, drop_remainder=True)
 
-# PREDICTION MODE:
-num_replicas = strategy.num_replicas_in_sync
-test_input = X_test[0:1]
+        # val_ds = tf.data.Dataset.from_tensor_slices((X_test, y_test))
+        # val_ds = val_ds.batch(GLOBAL_BATCH_SIZE, drop_remainder=True)
 
-if test_input.shape[0] == 0:
-    raise ValueError("test_input is empty. Cannot predict.")
 
-if test_input.shape[0] < num_replicas:
-    # replicate the single sample so each replica receives at least one item
-    test_input_rep = np.repeat(test_input, num_replicas, axis=0)  # shape (num_replicas, seq_len, features)
-    predicted_scaled = model.predict(test_input_rep, batch_size=num_replicas)
-    # take the first prediction as the real one (they're identical because inputs were duplicated)
-    predicted_scaled = predicted_scaled[0:1]
-else:
-    predicted_scaled = model.predict(test_input, batch_size=num_replicas)
+        # Train model
+        # history = model.fit(train_ds, epochs=PASSES, validation_data=val_ds, verbose=1)
+        history = model.fit(X_train, y_train,epochs=PASSES,batch_size=GLOBAL_BATCH_SIZE,validation_split=0.2,verbose=1)
 
-predicted_number = scaler.inverse_transform(predicted_scaled)
-actual_scaled = y_test[0:1]
-actual_number = scaler.inverse_transform(actual_scaled)
+# 1 talley mark per hour lost trying to run validation data for training: l l l l l l
+        logger.info("Training Complete")
 
-# Final time recording for logging output
-endTime = datetime.now()
+        # saving model
+        if SAVE_MODEL:
+                model.save(MODEL_NAME)
+                logger.save("Model saved to ", MODEL_NAME)
 
-# output
-print(f"Training results for training from", startTime, " to ", endTime)
-print(f"\nPredicted Next Number: {predicted_number[0,0]:.1f}")
-print(f"Actual Next Number:    {actual_number[0,0]:.1f}")
-print(f"Training Passes: {PASSES}")
-# Logging output
-o = sys.stdout
-with open('output.txt', 'a') as f:
-    sys.stdout = f
-    print(f"Training results for training from", startTime, " to ", endTime)
-    print(f"Predicted Next Number: {predicted_number[0,0]:.1f}")
-    print(f"Actual Next Number:    {actual_number[0,0]:.1f}")
-    print(f"Training Passes: {PASSES}")
-sys.stdout = o
+        # saving scaler
+        if SAVE_SCALER:
+                joblib.dump(scaler, SCALER_NAME)
+                logger.info("Scaler saved to ", SCALER_NAME)
+        # recording training history
+        endTime = datetime.now()
+        duration = endTime-startTime
+        logging.info("Training Complete. Trained from %s to $s", str(startTime), str(endTime))
+        logging.info("Total Training Duration: %s", str(duration))
+
+        return {"model": model,"scaler": scaler,"X_test": X_test,"y_test": y_test,"strategy": strategy}
+
+
+# PREDICTION
+def predict(model, scaler, X_test, y_test, strategy=None):
+        num_replicas = strategy.num_replicas_in_sync
+        test_input = X_test[0:1]
+        predicted_scaled = None
+        logger.info("Beginning Prediction")
+        if test_input.shape[0] < num_replicas:
+                # replicate the single sample so each replica receives at least one item
+                test_input_rep = np.repeat(test_input, num_replicas, axis=0)  # shape (num_replicas, seq_len, features)
+                predicted_scaled = model.predict(test_input_rep, batch_size=num_replicas)
+                # take the first prediction as the real one (they're identical because inputs were duplicated)
+                predicted_scaled = predicted_scaled[0:1]
+        else:
+                predicted_scaled = model.predict(test_input, batch_size=num_replicas)
+        predicted_number = scaler.inverse_transform(predicted_scaled)
+        actual_number = scaler.inverse_transform(y_test[0:1])
+
+        summary = {"predicted_first": float(predicted_number[0,0]), "actual_first": float(actual_number[0,0]),"passes":PASSES,"train_size":int(len(X_test)),"test_size":int(len(y_test)) }
+
+        logger.info("Prediction: predicted=%s actual=%s",predicted_number.ravel().tolist(),actual_number.ravel().tolist())
+
+        logger.info("Summary: %s", summary)
+        return summary
+
+# MAIN
+# Where everything runs
+def main():
+        training = train_model()
+        summary = predict(model=training["model"],scaler=training["scaler"],X_test=training["X_test"],y_test=training["y_test"],strategy=training["strategy"])
+
+if __name__ == "__main__":
+        main()
