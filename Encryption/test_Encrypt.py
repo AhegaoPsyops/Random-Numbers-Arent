@@ -1,4 +1,4 @@
-from Encrypt import createImages, analyzeImages, create_folder, image_taker, clear_images, save_frame
+from Encrypt import createImages, analyzeImages, create_folder, image_taker, clear_images, save_frame, entropy
 import pytest
 from unittest.mock import patch, MagicMock
 import cv2 as cv 
@@ -172,3 +172,43 @@ def test_create_folder(tmp_path):
     # Assert: the folder still exists and the same path is returned
     assert created_again == str(folder_name)
     assert os.path.isdir(created_again)
+
+@patch("os.listdir")
+@patch("os.path.join")
+@patch("Encrypt.cv.calcHist")
+@patch("Encrypt.cv.imread")
+def test_entropy(mock_imread, mock_calcHist, mock_join, mock_listdir):
+    # Pretend the folder contains 2 images
+    mock_listdir.return_value = ["opencv_frame_0.png", "opencv_frame_1.png"]
+
+    # Fake join
+    mock_join.side_effect = lambda folder, name: f"{folder}/{name}"
+
+    # Fake grayscale image: a 2x2 image
+    fake_img = np.array([
+        [10, 10],
+        [20, 20]
+    ], dtype=np.uint8)
+
+    # imread returns this same valid image each time
+    mock_imread.return_value = fake_img
+
+    # Fake histogram: 256 bins
+    # Only intensities 10 and 20 exist with 2 pixels each (total 4 pixels)
+    hist = np.zeros((256, 1), dtype=np.float32)
+    hist[10] = 2
+    hist[20] = 2
+
+    mock_calcHist.return_value = hist
+
+    # Expected Shannon entropy:
+    # p(10) = 2/4 = 0.5
+    # p(20) = 2/4 = 0.5
+    # entropy = - Σ p log2 p = 1.0 per image
+    # total entropy = 2.0
+    # avg_entropy = entropy / 20 = 2 / 20 = 0.1
+    expected = 0.1
+
+    result = entropy()
+
+    assert abs(result - expected) < 1e-6
