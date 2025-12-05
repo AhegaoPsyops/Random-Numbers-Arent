@@ -37,7 +37,7 @@ def create_folder(name):
 ### Returns ###
 # N/A
 def save_frame(path, frame):
-    cv.imwrite(path, frame)  #Writes the image into save folder
+    return cv.imwrite(path, frame)  #Writes the image into save folder
 
 ############   SPACE_BAR_COMMAND   ######################
 ### If space bar, then take photos

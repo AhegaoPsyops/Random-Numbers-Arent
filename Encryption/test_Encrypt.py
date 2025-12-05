@@ -2,6 +2,9 @@ from Encrypt import createImages, analyzeImages, create_folder, image_taker, cle
 import pytest
 from unittest.mock import patch, MagicMock
 import cv2 as cv 
+import numpy as np
+import os
+import shutil
 
 # Constants to match your code (replace with your actual key codes)
 IMAGE_TAKER_ORD = 32  # space
@@ -15,6 +18,7 @@ CLEAR_IMAGES_ORD = ord('c')
 @patch('Encrypt.image_taker')            # mock image saving
 @patch('Encrypt.analyzeImages')          # mock analyze
 @patch('Encrypt.clear_images')           # mock clear
+
 
 def test_createImages(mock_clear, mock_analyze, mock_image_taker, mock_create_folder,
                       mock_waitKey, mock_imshow, mock_VideoCapture):
@@ -77,6 +81,7 @@ def test_save_frame(monkeypatch, tmp_path):
 
     saved = {}
 
+    # Correct signature: imwrite(path, frame)
     def fake_imwrite(path, frame):
         saved[path] = True
         return True
@@ -86,8 +91,9 @@ def test_save_frame(monkeypatch, tmp_path):
     frame = "fake_frame_data"
     output = tmp_path / "test.png"
 
-    assert save_frame(frame, str(output))
+    assert save_frame(str(output), frame)
     assert str(output) in saved
+
 
 
 def test_clear_images(tmp_path):
@@ -104,6 +110,65 @@ def test_clear_images(tmp_path):
     assert len(list(folder.glob("*.png"))) == 0
 
 
-def test_analyzeImages():
-    #TODO
-    return
+@patch("Encrypt.os.listdir")
+@patch("Encrypt.os.path.join")
+@patch("Encrypt.cv.imread")
+@patch("Encrypt.rand.randint")
+@patch("Encrypt.entropy")
+
+def test_analyzeImages(
+    mock_entropy, mock_randint, mock_imread, mock_join, mock_listdir
+):
+    # Pretend directory has 2 image files
+    mock_listdir.return_value = ["opencv_frame_0.png", "opencv_frame_1.png"]
+
+    # Fake os.path.join
+    mock_join.side_effect = lambda folder, name: f"{folder}/{name}"
+
+    # Fake images as numpy arrays
+    img1 = np.array([
+        [[10, 20, 30], [40, 50, 60]],
+        [[70, 80, 90], [100, 110, 120]]
+    ])
+
+    img2 = np.array([
+        [[1, 2, 3], [4, 5, 6]],
+        [[7, 8, 9], [10, 11, 12]]
+    ])
+
+    mock_imread.side_effect = [img1, img2]
+
+    # Always choose pixel (0,0)
+    mock_randint.return_value = 0
+
+    from Encrypt import analyzeImages
+    result = analyzeImages()
+
+    # Expected calculation:
+    # img1 pixel [10,20,30] -> R,G,B = 20,30,10
+    # img2 pixel [1,2,3]    -> R,G,B = 2,3,1
+    expected = "203010231"
+
+    assert result == expected
+    mock_entropy.assert_called_once()
+
+def test_create_folder(tmp_path):
+    # Arrange: pick a folder name inside pytest's temporary directory
+    folder_name = tmp_path / "captured_images"
+
+    # Act: call your function with the full path as a string
+    created = create_folder(str(folder_name))
+
+    # Assert: the folder should now exist
+    assert os.path.exists(created)
+    assert os.path.isdir(created)
+
+    # Assert: returned path should match exactly
+    assert created == str(folder_name)
+
+    # Act again: calling a second time should NOT raise errors or recreate
+    created_again = create_folder(str(folder_name))
+
+    # Assert: the folder still exists and the same path is returned
+    assert created_again == str(folder_name)
+    assert os.path.isdir(created_again)
