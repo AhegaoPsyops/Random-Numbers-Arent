@@ -11,9 +11,6 @@ def Encryption_thread(work_id, window):
     # at the end of the work, before exiting, send a message back to the GUI indicating end
     window.write_event_value('-THREAD DONE-', work_id)
     # at this point, the thread exits
-    
-
-
 
 ############################# Begin GUI code #############################
 def the_gui():
@@ -69,10 +66,8 @@ def the_gui():
 
     # if user exits the window, then close the window and exit the GUI func
     window.close()
-    
 
 ############################# Main #############################
-
 
 if __name__ == '__main__':
     the_gui()
