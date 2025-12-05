@@ -17,7 +17,7 @@ def Encryption_thread(work_id, window):
 
 ############################# Begin GUI code #############################
 def the_gui():
-    sg.theme('Light Brown 3')
+    sg.theme('DarkBlue')
 
 
     layout = [[sg.Text('PRNG Generator')],
