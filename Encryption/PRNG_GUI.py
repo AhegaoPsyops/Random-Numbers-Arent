@@ -5,70 +5,119 @@ import Encrypt
 
 
 def Encryption_thread(work_id, window):
-    # LOCATION 1
-    # this is our "long running function call"
-    Encrypt.createImages()
-    # at the end of the work, before exiting, send a message back to the GUI indicating end
-    window.write_event_value('-THREAD DONE-', work_id)
-    # at this point, the thread exits
+    """Thread that runs the image capture safely."""
+    try:
+        Encrypt.createImages()
+        thread_result = {"ok": True, "id": work_id}
+    except Exception as e:
+        thread_result = {"ok": False, "id": work_id, "error": str(e)}
+
+    # notify GUI thread
+    window.write_event_value('-THREAD DONE-', thread_result)
+    # thread exits here
+
 
 ############################# Begin GUI code #############################
 def the_gui():
     sg.theme('DarkBlue')
 
-
-    layout = [[sg.Text('PRNG Generator')],
-              [sg.Text('Please Select Option')],
-              [sg.Text(size=(40, 1), key='-OUTPUT-')],
-              [sg.Text(size=(25, 1), key='-OUTPUT2-')],
-              [sg.Text('⚫', text_color='blue', key=i, pad=(0,0), font='Default 14') for i in range(20)],
-              [sg.Button('Generate PRNG'), sg.Button('Average Entropy', button_color='orange'), sg.Button('Predict PRNG', button_color='green'), sg.Button('Exit', button_color='red')], ]
+    layout = [
+        [sg.Text('PRNG Generator')],
+        [sg.Text('Please Select Option')],
+        [sg.Text(size=(40, 1), key='-OUTPUT-')],
+        [sg.Text(size=(25, 1), key='-OUTPUT2-')],
+        [sg.Text('⚫', text_color='blue', key=i, pad=(0,0), font='Default 14') for i in range(20)],
+        [
+            sg.Button('Generate PRNG'),
+            sg.Button('Average Entropy', button_color='orange'),
+            sg.Button('Predict PRNG', button_color='green'),
+            sg.Button('Exit', button_color='red'),
+        ],
+    ]
 
     window = sg.Window('Random Numbers Are Not', layout)
-    # --------------------- EVENT LOOP ---------------------
+
     work_id = 0
     while True:
-        # wait for up to 100 ms for a GUI event
         event, values = window.read()
+
         if event in (sg.WIN_CLOSED, 'Exit'):
             break
-        if event == 'Generate PRNG':    # clicking "Go" starts a long running work item by starting thread
-            #call the popup explaining keys
-            sg.popup_non_blocking('Spacebar: takes PNG Photos\nq: close webcam and analyze\nc: clear captured_images', grab_anywhere=True)
-            #update status dots 
-            window['-OUTPUT-'].update('Generating PRNG %s' % work_id)
+
+        # ------------------ RUN PRNG GENERATION ------------------
+        if event == 'Generate PRNG':
+            sg.popup_non_blocking(
+                'Spacebar: takes PNG Photos\nq: close webcam and analyze\nc: clear captured_images',
+                grab_anywhere=True
+            )
+
+            window['-OUTPUT-'].update(f'Generating PRNG {work_id}')
             window[work_id].update(text_color='red')
-            # STARTING a thread, which will run Encrypt.py
-            thread_id = threading.Thread(
-                target=Encryption_thread,
-                args=(work_id, window,),
-                daemon=True)
-            thread_id.start()
-            work_id = work_id+1 if work_id < 19 else 0
 
-        # if message received from queue, then some work was completed
+            try:
+                thread_id = threading.Thread(
+                    target=Encryption_thread,
+                    args=(work_id, window),
+                    daemon=True
+                )
+                thread_id.start()
+            except Exception as e:
+                window['-OUTPUT2-'].update("ERROR: Could not start thread")
+                sg.popup_error(f"Thread Error:\n{e}")
+                window[work_id].update(text_color='yellow')
+                continue
+
+            work_id = work_id + 1 if work_id < 19 else 0
+
+        # ------------------ THREAD FINISHED ------------------
         if event == '-THREAD DONE-':
-            completed_work_id = values[event]
-            window['-OUTPUT2-'].update(
-                'Complete Work ID "{}"'.format(completed_work_id))
-            window[completed_work_id].update(text_color='green')
-            PRNG = Encrypt.analyzeImages()
-            prng_len = 1000
-            sg.popup_non_blocking(f'Raw Key: {PRNG}\nKey Length: {prng_len}', grab_anywhere=True)
+            result = values[event]
+            completed_id = result["id"]
 
-        ## This is just the syntax for a popup -- only here so I can easily copy/paste for now.
+            if result.get("ok") is False:
+                # Thread failed
+                window['-OUTPUT2-'].update(f"FAILED Work ID {completed_id}")
+                window[completed_id].update(text_color='yellow')
+                sg.popup_error(f"Error during image capture:\n{result.get('error')}")
+                continue
+
+            # Thread succeeded
+            window['-OUTPUT2-'].update(f'Complete Work ID "{completed_id}"')
+            window[completed_id].update(text_color='green')
+
+            # Analyze PRNG safely
+            try:
+                prng = Encrypt.analyzeImages()
+                prng_len = len(prng) if prng is not None else 0
+                sg.popup_non_blocking(
+                    f'Raw Key: {prng}\nKey Length: {prng_len}',
+                    grab_anywhere=True
+                )
+            except Exception as e:
+                sg.popup_error(f"Error analyzing images:\n{e}")
+
+        # ------------------ AVERAGE ENTROPY ------------------
         if event == 'Average Entropy':
-            avg_entropy = Encrypt.entropy()
-            if avg_entropy != None:
-                sg.popup_non_blocking(f'The average entropy of these images are: {avg_entropy:.4f}', grab_anywhere=True)
-            else:
-                sg.popup_non_blocking(f'No images in directory', grab_anywhere=True)
+            try:
+                avg_entropy = Encrypt.entropy()
+                if avg_entropy is not None:
+                    sg.popup_non_blocking(
+                        f'The average entropy of these images is: {avg_entropy:.4f}',
+                        grab_anywhere=True
+                    )
+                else:
+                    sg.popup_non_blocking('No images in directory', grab_anywhere=True)
+            except Exception as e:
+                sg.popup_error(f"Entropy Error:\n{e}")
 
-    # if user exits the window, then close the window and exit the GUI func
     window.close()
 
-############################# Main #############################
 
+############################# Main #############################
 if __name__ == '__main__':
-    the_gui()
+    try:
+        the_gui()
+    except Exception as e:
+        sg.popup_error(f"Fatal GUI Error:\n{e}")
+
     print('Exiting Program')
