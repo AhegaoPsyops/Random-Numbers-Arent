@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
@@ -11,12 +10,13 @@ import sys
 import logging
 import joblib
 
+# Ethan Dykes
 
 # RANDOM NUMBERS ARENT
 # The goal of this project is to prove if an AI model is capable of guessing the next numbers in a chain.
 # Utilizes Keras to create an LSTM AI model, allowing Neural Networks to calculate algorithms over training on numbers
 # Trains on a chain of random numbers, and then predicts off of a testing split.
-#
+# Built to train on custom hardware, but modifed for hardware Agnostic training
 
 # TRAINING VARIABLES
 # These are the global variables for training
@@ -25,7 +25,7 @@ import joblib
 SEQUENCE_LENGTH = 256
 NUM_FEATURES = 1
 # Numbers being trained on
-PRNG_SEQUENCE_LENGTH = 512
+PRNG_SEQUENCE_LENGTH = 1024
 # Predicted values: for most effectiveness using 0-9
 PRED_VALUES = 10
 # How many to predict
@@ -138,12 +138,6 @@ def train_model():
         model.summary(print_fn=lambda s: logger.info(s))
 
         logger.info("Starting training for %d Epochs", PASSES)
-        # Before training, if there is any remainders when mirroring data to GPUs, drops overflow
-        #train_ds = tf.data.Dataset.from_tensor_slices((X_train, y_train))
-        # train_ds = train_ds.shuffle(buffer_size=len(X_train), seed=RANDOM_SEED).batch(GLOBAL_BATCH_SIZE, drop_remainder=True)
-
-        # val_ds = tf.data.Dataset.from_tensor_slices((X_test, y_test))
-        # val_ds = val_ds.batch(GLOBAL_BATCH_SIZE, drop_remainder=True)
 
 
         # Train model
@@ -156,16 +150,17 @@ def train_model():
         # saving model
         if SAVE_MODEL:
                 model.save(MODEL_NAME)
-                logger.save("Model saved to ", MODEL_NAME)
+                logger.info("Model saved to %s", MODEL_NAME)
 
         # saving scaler
         if SAVE_SCALER:
                 joblib.dump(scaler, SCALER_NAME)
-                logger.info("Scaler saved to ", SCALER_NAME)
+                logger.info("Scaler saved to %s", SCALER_NAME)
         # recording training history
         endTime = datetime.now()
         duration = endTime-startTime
-        logging.info("Training Complete. Trained from %s to $s", str(startTime), str(endTime))
+        # logging.info("Training Complete. Trained from %s to $s", str(startTime), str(endTime))
+        logging.info("Training Complete. Training start: %s ", str(startTime))
         logging.info("Total Training Duration: %s", str(duration))
 
         return {"model": model,"scaler": scaler,"X_test": X_test,"y_test": y_test,"strategy": strategy}
@@ -203,3 +198,6 @@ def main():
 
 if __name__ == "__main__":
         main()
+
+
+# Powered by the Ballmer Peak
