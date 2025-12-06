@@ -58,6 +58,23 @@ venv\Scripts\activate     # Windows
 - **Notes:**
     - Tests cover Encrypt functions and GUI workflows.
     - Uses mocks to simulate webcam and GUI events.
+ 
+  ## AI Training
+- **How to train AI model locally:**
+    - Install Keras from Tensorflow
+```
+pip install --upgrade keras
+
+```
+ - Open "randisnt.py" in a code editor.
+ - Check and modify training flags
+     - Ensure the **GPU_ENABLED** flag is False if training on CPU
+ - Execute the program and view results of training. 
+- **Notes:**
+    - Options for changing training datasets
+    - Optional exporting of AI model for later import and prediction, as well as further training
+    
+
 
 ## 🏗️ Project Structure
 - **File Structure:**
